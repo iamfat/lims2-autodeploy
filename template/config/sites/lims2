@@ -1,0 +1,50 @@
+map $request_uri $lims_path_info {
+    ~^/lims/(?P<foo>.*)$  $foo;
+}
+
+server {
+
+    root /usr/share/nginx/html;
+    index index.php index.html index.htm;
+
+    location /lims {
+        alias /usr/local/share/lims2/public/;
+
+        location ~ ^/lims/\!.+\.(js|css|png|jpg|jpeg|gif|ico|swf)$ {
+            rewrite ^/lims/(.+)$ /lims/index.php/public?f=$1;
+            fastcgi_param SITE_ID "$SITE_ID";
+            fastcgi_param LAB_ID "$LAB_ID";
+        }
+
+        location ~ \.php {
+            fastcgi_split_path_info ^(.+\.php)(/.+)$;
+
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param PATH_INFO $fastcgi_path_info;
+            fastcgi_param SITE_ID "$SITE_ID";
+            fastcgi_param LAB_ID "$LAB_ID";
+
+            include fastcgi_params;
+        }
+
+        location ~ \.(js|css|png|jpg|jpeg|gif|ico|swf)$ {
+            expires max;
+               log_not_found off;
+        }
+
+        location ~ \/.+ {
+            try_files $request_uri $request_uri/ /lims/index.php/$lims_path_info;
+        }
+
+    }
+
+    location /public {
+        try_files $uri $uri/ /public/index.php?$args;
+        location ~ \.php$ {
+            include fastcgi_params;
+            fastcgi_pass 127.0.0.1:9000;
+        }
+    }
+
+}

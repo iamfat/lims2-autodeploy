@@ -1,0 +1,65 @@
+#!/bin/bash
+
+APP_DIR=$(dirname $(dirname $0))
+TEMPLATE=$APP_DIR/template
+
+CONFIG=$1
+. $CONFIG
+
+: ${LIMS2_DIR:="$TARGET_DIR/lims2"}
+: ${MYSQL_DIR:="$TARGET_DIR/mysql"}
+: ${SPHINX_DIR:="$TARGET_DIR/sphinxsearch"}
+
+: ${LOG_DIR:="$TARGET_DIR/logs"}
+: ${CONFIG_DIR:="$TARGET_DIR/config"}
+
+: ${NGINX_CONFIG_DIR:="$CONFIG_DIR/sites"}
+: ${NGINX_LOG_DIR:="$LOG_DIR/nginx"}
+
+: ${SPHINX_CONFIG_DIR:="$CONFIG_DIR/sphinxsearch"}
+: ${SPHINX_LOG_DIR:="$LOG_DIR/sphinxsearch"}
+
+: ${MYSQL_CONFIG_DIR:="$CONFIG_DIR/mysql"}
+: ${MYSQL_LOG_DIR:="$LOG_DIR/mysql"}
+
+if [ -z $TARGET_DIR ] 
+then
+	echo 'empty $TARGET_DIR' 
+	exit 1
+fi
+
+if [ ! -d $TARGET_DIR ] 
+then
+	cp -r $TEMPLATE $TARGET_DIR
+	sed -i 's/$SITE_ID/'$SITE_ID'/g' $TARGET_DIR/config/sites/lims2
+	sed -i 's/$LAB_ID/'$LAB_ID'/g' $TARGET_DIR/config/sites/lims2
+	sed -i 's/$SITE_ID/'$SITE_ID'/g' $TARGET_DIR/config/sphinxsearch/conf.d/lims2.conf
+	sed -i 's/$LAB_ID/'$LAB_ID'/g' $TARGET_DIR/config/sphinxsearch/conf.d/lims2.conf
+fi
+
+CONTAINER_NAME=lims2-$SITE_ID-$LAB_ID
+
+if [ $ENABLE_SPHINX == '1' ] 
+then
+	docker run --name $CONTAINER_NAME-sphinx -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged \
+	    -v $SPHINX_DIR:/var/lib/sphinxsearch \
+	    -v $SPHINX_CONFIG_DIR:/etc/sphinxsearch \
+	    -v $SPHINX_LOG_DIR:/var/log/sphinxsearch \
+	    -d iamfat/sphinxsearch
+fi
+
+if [ $ENABLE_MYSQL == '1' ] 
+then
+	docker run --name $CONTAINER_NAME-mysql -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged \
+	    -v $MYSQL_DIR:/var/lib/mysql \
+	    -v $MYSQL_CONFIG_DIR:/etc/mysql \
+	    -v $MYSQL_LOG_DIR:/var/log/mysql \
+	    -d iamfat/mysql
+fi
+
+docker run --name $CONTAINER_NAME -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged \
+    -v $NGINX_CONFIG_DIR:/etc/nginx/sites-enabled \
+    -v $NGINX_LOG_DIR:/var/log/nginx \
+    -v $LIMS2_DIR:/usr/local/share/lims2 \
+    -p 80 \
+    -d iamfat/lims2
