@@ -44,7 +44,7 @@ fi
 
 CONTAINER_NAME=lims2-$SITE_ID-$LAB_ID
 
-if [ $ENABLE_SPHINX == '1' ] 
+if [ "$ENABLE_SPHINX" == '1' ] 
 then
 	docker run --name $CONTAINER_NAME-sphinx -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged \
 	    -v $SPHINX_DIR:/var/lib/sphinxsearch \
@@ -53,7 +53,7 @@ then
 	    -d iamfat/sphinxsearch
 fi
 
-if [ $ENABLE_MYSQL == '1' ] 
+if [ "$ENABLE_MYSQL" == '1' ] 
 then
 	docker run --name $CONTAINER_NAME-mysql -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged \
 	    -v $MYSQL_DIR:/var/lib/mysql \
