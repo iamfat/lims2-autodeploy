@@ -3,6 +3,11 @@
 APP_DIR=$(dirname $(dirname $0))
 TEMPLATE=$APP_DIR/template
 
+if [ $# -eq 0 ]; then
+	echo "Usage: $(basename $0) <config file>"
+	exit 1
+fi
+
 CONFIG=$1
 . $CONFIG
 
