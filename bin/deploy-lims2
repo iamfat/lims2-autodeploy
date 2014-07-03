@@ -47,6 +47,7 @@ fi
 
 if [ ! -d $TARGET_DIR ] 
 then
+	mkdir -p $(dirname $TARGET_DIR)
 	cp -r $TEMPLATE $TARGET_DIR
 	sed -i 's/$SITE_ID/'$SITE_ID'/g' $TARGET_DIR/config/sites/lims2
 	sed -i 's/$LAB_ID/'$LAB_ID'/g' $TARGET_DIR/config/sites/lims2
