@@ -17,6 +17,18 @@ then
 	exit 1
 fi
 
+if [ -z "$SITE_ID" ]
+then
+	echo 'empty $SITE_ID'
+	exit 1
+fi
+
+if [ -z "$LAB_ID" ]
+then
+	echo 'empty $LAB_ID'
+	exit 1
+fi
+
 : ${LIMS2_DIR:="$TARGET_DIR/lims2"}
 : ${MYSQL_DIR:="$TARGET_DIR/mysql"}
 : ${SPHINX_DIR:="$TARGET_DIR/sphinxsearch"}
