@@ -11,6 +11,12 @@ fi
 CONFIG=$1
 . $CONFIG
 
+if [ -z "$TARGET_DIR" ] 
+then
+	echo 'empty $TARGET_DIR' 
+	exit 1
+fi
+
 : ${LIMS2_DIR:="$TARGET_DIR/lims2"}
 : ${MYSQL_DIR:="$TARGET_DIR/mysql"}
 : ${SPHINX_DIR:="$TARGET_DIR/sphinxsearch"}
@@ -26,12 +32,6 @@ CONFIG=$1
 
 : ${MYSQL_CONFIG_DIR:="$CONFIG_DIR/mysql"}
 : ${MYSQL_LOG_DIR:="$LOG_DIR/mysql"}
-
-if [ -z $TARGET_DIR ] 
-then
-	echo 'empty $TARGET_DIR' 
-	exit 1
-fi
 
 if [ ! -d $TARGET_DIR ] 
 then
