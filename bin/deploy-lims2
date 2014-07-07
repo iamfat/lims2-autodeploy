@@ -30,6 +30,7 @@ then
 fi
 
 : ${LIMS2_DIR:="$TARGET_DIR/lims2"}
+: ${LAB_DIR:="$TARGET_DIR/lib"}
 : ${MYSQL_DIR:="$TARGET_DIR/mysql"}
 : ${SPHINX_DIR:="$TARGET_DIR/sphinxsearch"}
 
@@ -89,9 +90,16 @@ then
 	fi
 fi
 
+: ${BACKUP_LAB_DIR:=${LIMS2_DIR}/sites/${SITE_ID}/labs/${LAB_ID}}
+BACKUP_LAB_DIR=${BACKUP_LAB_DIR%%/}
+rsync -azKs "${BACKUP_LAB_DIR}/" "${LAB_DIR}"
+rm -rf $LIMS2_DIR/sites/lab
+DOCKER_LAB_DIR="/var/lib/lims2/sites/${SITE_ID}/labs/${LAB_ID}"
+ln -s "$DOCKER_LAB_DIR" $LIMS2_DIR/sites/lab
 docker run --name $CONTAINER_NAME -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged \
     -v $NGINX_CONFIG_DIR:/etc/nginx/sites-enabled \
     -v $NGINX_LOG_DIR:/var/log/nginx \
     -v $LIMS2_DIR:/usr/local/share/lims2 \
+    -v $LAB_DIR:$DOCKER_LAB_DIR \
     -p 80 \
     -d iamfat/lims2
