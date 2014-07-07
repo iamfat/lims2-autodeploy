@@ -68,11 +68,25 @@ fi
 
 if [ "$ENABLE_MYSQL" == '1' ] 
 then
-	docker run --name $CONTAINER_NAME-mysql -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged \
+	MYSQL_CONTAINER_NAME=$CONTAINER_NAME-mysql
+	docker run --name $MYSQL_CONTAINER_NAME -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged \
 	    -v $MYSQL_DIR:/var/lib/mysql \
 	    -v $MYSQL_CONFIG_DIR:/etc/mysql \
 	    -v $MYSQL_LOG_DIR:/var/log/mysql \
 	    -d iamfat/mysql
+	if [ -n "$BACKUP_FILE" ]; then
+		mysql_ip=$(docker inspect -f '{{ .NetworkSettings.IPAddress }}' $MYSQL_CONTAINER_NAME)
+		while ! mysql -h ${mysql_ip} -e 'quit' 2>/dev/null ; do
+			sleep 1
+		done
+		DB_NAME=lims2_${LAB_ID}
+		mysql -h ${mysql_ip} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME}"
+		if expr "$BACKUP_FILE" : "[a-zA-Z0-9+.-]\+:" >/dev/null 2>&1; then
+			curl --insecure ${BACKUP_FILE}
+		else
+			cat ${BACKUP_FILE}
+		fi | tar x -z -f - -O | mysql -h ${mysql_ip} ${DB_NAME}
+	fi
 fi
 
 docker run --name $CONTAINER_NAME -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged \
