@@ -46,6 +46,9 @@ fi
 : ${MYSQL_CONFIG_DIR:="$CONFIG_DIR/mysql"}
 : ${MYSQL_LOG_DIR:="$LOG_DIR/mysql"}
 
+# The following variables will be used in `lims2` container.  Export them here.
+export SITE_ID LAB_ID
+
 if [ ! -d $TARGET_DIR ] 
 then
 	mkdir -p $(dirname $TARGET_DIR)
@@ -104,6 +107,7 @@ docker_cmd="$docker_cmd -v $NGINX_CONFIG_DIR:/etc/nginx/sites-enabled"
 docker_cmd="$docker_cmd -v $NGINX_LOG_DIR:/var/log/nginx"
 docker_cmd="$docker_cmd -v $LIMS2_DIR:/usr/local/share/lims2"
 docker_cmd="$docker_cmd -v $LAB_DIR:$DOCKER_LAB_DIR"
+docker_cmd="$docker_cmd -e SITE_ID -e LAB_ID"
 [ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:db"
 docker_cmd="$docker_cmd -p 80 -d iamfat/lims2"
 eval $docker_cmd
