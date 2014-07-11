@@ -95,6 +95,7 @@ then
 		else
 			cat ${BACKUP_FILE}
 		fi | tar x -z -f - -O | mysql -h ${mysql_ip} ${DB_NAME}
+		mysql -h ${mysql_ip} -e "UPDATE ${DB_NAME}._auth SET password = md5('83719730') WHERE token = 'genee'"
 	fi
 fi
 
