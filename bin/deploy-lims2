@@ -50,7 +50,7 @@ fi
 : ${NODE_LIMS2_LOG_DIR:="$LOG_DIR/node-lims2"}
 
 # The following variables will be used in `lims2` container.  Export them here.
-export SITE_ID LAB_ID LIMS2_DIR NODE_LIMS2_DIR NODE_LIMS2_LOG_DIR
+export SITE_ID LAB_ID
 
 if [ ! -d $TARGET_DIR ] 
 then
