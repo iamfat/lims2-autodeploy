@@ -125,6 +125,6 @@ docker_cmd="$docker_cmd -e CACHE_DIR=${DOCKER_CACHE_DIR}"
 docker_cmd="$docker_cmd -e NODE_LIMS2_DIR=${DOCKER_NODE_LIMS2_DIR}"
 docker_cmd="$docker_cmd -e NODE_LIMS2_LOG_DIR=${DOCKER_NODE_LIMS2_LOG_DIR}"
 docker_cmd="$docker_cmd -e GLOGON_SERVER_DIR=${DOCKER_GLOGON_SERVER_DIR}"
-[ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:db"
+[ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:mysql"
 docker_cmd="$docker_cmd -p 80 -d iamfat/lims2"
 eval $docker_cmd
