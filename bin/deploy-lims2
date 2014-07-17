@@ -37,7 +37,7 @@ then
 	exit 1
 fi
 
-: ${CONTAINER_NAME:=lims2-${SITE_ID}-${LAB_ID}}
+: ${CONTAINER_NAME:=$(basename $ROOT_DIR)}
 
 : ${SRC_DIR:="${ROOT_DIR}/src"}
 : ${TARGET_DIR:="${ROOT_DIR}/data"}
