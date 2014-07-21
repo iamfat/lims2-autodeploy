@@ -8,7 +8,7 @@ server {
     index index.php index.html index.htm;
 
     location /lims {
-        alias /usr/local/share/lims2/public/;
+        alias /usr/share/lims2/public/;
 
         location ~ ^/lims/\!.+\.(js|css|png|jpg|jpeg|gif|ico|swf)$ {
             rewrite ^/lims/(.+)$ /lims/index.php/public?f=$1;
