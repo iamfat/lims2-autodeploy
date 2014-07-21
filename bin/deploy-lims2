@@ -54,7 +54,7 @@ fi
 : ${GLOGON_SERVER_GIT_URL:=/var/lib/git/glogon-server.git}
 : ${GLOGON_SERVER_COMMIT:=master}
 
-: ${LAB_DIR:="$TARGET_DIR/lib"}
+: ${LABS_DIR:="$TARGET_DIR/lib"}
 : ${MYSQL_DIR:="$TARGET_DIR/mysql"}
 : ${SPHINX_DIR:="$TARGET_DIR/sphinxsearch"}
 
@@ -125,12 +125,12 @@ then
 	fi
 fi
 
-: ${BACKUP_LAB_DIR:=${LIMS2_DIR}/sites/${SITE_ID}/labs/${LAB_ID}}
-BACKUP_LAB_DIR=${BACKUP_LAB_DIR%%/}
-[ -e ${LAB_DIR} ] || rsync -azKs "${BACKUP_LAB_DIR}/" "${LAB_DIR}"
+: ${BACKUP_LABS_DIR:=${LIMS2_DIR}/sites/${SITE_ID}/labs}
+BACKUP_LABS_DIR=${BACKUP_LABS_DIR%%/}
+[ -e ${LABS_DIR} ] || rsync -azKs "${BACKUP_LABS_DIR}/" "${LABS_DIR}"
 
 export DOCKER_LIMS2_DIR=/usr/local/share/lims2
-export DOCKER_LAB_DIR=/var/lib/lims2/sites/${SITE_ID}/labs/${LAB_ID}
+export DOCKER_LABS_DIR=/var/lib/lims2/sites/${SITE_ID}/labs
 export DOCKER_CACHE_DIR=/var/cache/lims2
 export DOCKER_NODE_LIMS2_DIR=/home/genee/node-lims2
 export DOCKER_NODE_LIMS2_LOG_DIR=/var/log/node-lims2
@@ -140,13 +140,13 @@ docker_cmd="docker run --name $CONTAINER_NAME -v /dev/log:/dev/log -v $TARGET_DI
 docker_cmd="$docker_cmd -v $NGINX_CONFIG_DIR:/etc/nginx/sites-enabled"
 docker_cmd="$docker_cmd -v $NGINX_LOG_DIR:/var/log/nginx"
 docker_cmd="$docker_cmd -v $LIMS2_DIR:${DOCKER_LIMS2_DIR}"
-docker_cmd="$docker_cmd -v $LAB_DIR:${DOCKER_LAB_DIR}"
+docker_cmd="$docker_cmd -v $LABS_DIR:${DOCKER_LABS_DIR}"
 docker_cmd="$docker_cmd -v ${NODE_LIMS2_DIR}:${DOCKER_NODE_LIMS2_DIR}"
 docker_cmd="$docker_cmd -v ${NODE_LIMS2_LOG_DIR}:${DOCKER_NODE_LIMS2_LOG_DIR}"
 docker_cmd="$docker_cmd -v ${GLOGON_SERVER_DIR}:${DOCKER_GLOGON_SERVER_DIR}"
 docker_cmd="$docker_cmd -e SITE_ID -e LAB_ID"
 docker_cmd="$docker_cmd -e DOCKER_LIMS2_DIR"
-docker_cmd="$docker_cmd -e DOCKER_LAB_DIR"
+docker_cmd="$docker_cmd -e DOCKER_LABS_DIR"
 docker_cmd="$docker_cmd -e DOCKER_CACHE_DIR"
 docker_cmd="$docker_cmd -e DOCKER_NODE_LIMS2_DIR"
 docker_cmd="$docker_cmd -e DOCKER_NODE_LIMS2_LOG_DIR"
