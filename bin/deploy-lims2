@@ -87,9 +87,9 @@ fi
 
 [ -e $SRC_DIR ] || mkdir -p $SRC_DIR
 cd $SRC_DIR || exit 2
-[ -e $LIMS2_DIR ] || git clone --branch $LIMS2_COMMIT $LIMS2_GIT_URL $LIMS2_DIR
-[ -e $NODE_LIMS2_DIR ] || git clone --branch $NODE_LIMS2_COMMIT $NODE_LIMS2_GIT_URL $NODE_LIMS2_DIR
-[ -e $GLOGON_SERVER_DIR ] || git clone --branch $GLOGON_SERVER_COMMIT $GLOGON_SERVER_GIT_URL $GLOGON_SERVER_DIR
+[ -e $LIMS2_DIR ] || git clone --recursive --branch $LIMS2_COMMIT $LIMS2_GIT_URL $LIMS2_DIR
+[ -e $NODE_LIMS2_DIR ] || git clone --recursive --branch $NODE_LIMS2_COMMIT $NODE_LIMS2_GIT_URL $NODE_LIMS2_DIR
+[ -e $GLOGON_SERVER_DIR ] || git clone --recursive --branch $GLOGON_SERVER_COMMIT $GLOGON_SERVER_GIT_URL $GLOGON_SERVER_DIR
 cd $ROOT_DIR || exit 2
 
 if [ "$ENABLE_SPHINX" == '1' ] 
