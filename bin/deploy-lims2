@@ -8,14 +8,22 @@ if [ $# -eq 0 ]; then
 	exit 1
 fi
 
-CONFIG=$1
-. $CONFIG
+arg=$(readlink -e $1)
 
-if [ -z "$TARGET_DIR" ] 
-then
-	echo 'empty $TARGET_DIR' 
-	exit 1
+if [ -z "$arg" ]; then
+	echo "cannot access $1: No such file or directory"
+	exit 3
+elif [ -d "$arg" ]; then
+	ROOT_DIR=$arg
+	CONFIG=$arg/main.conf
+elif [ -e "$arg" ]; then
+	ROOT_DIR=$(dirname $arg)
+	CONFIG=$arg
 fi
+
+cd "$ROOT_DIR" || exit 2
+
+. $CONFIG
 
 if [ -z "$SITE_ID" ]
 then
@@ -29,8 +37,24 @@ then
 	exit 1
 fi
 
-: ${LIMS2_DIR:="$TARGET_DIR/lims2"}
-: ${LAB_DIR:="$TARGET_DIR/lib"}
+: ${CONTAINER_NAME:=$(basename $ROOT_DIR)}
+
+: ${SRC_DIR:="${ROOT_DIR}/src"}
+: ${TARGET_DIR:="${ROOT_DIR}/data"}
+
+: ${LIMS2_DIR:="${SRC_DIR}/lims2"}
+: ${LIMS2_GIT_URL:=/var/lib/git/lims2.git}
+: ${LIMS2_COMMIT:=master}
+
+: ${NODE_LIMS2_DIR:="${SRC_DIR}/node-lims2"}
+: ${NODE_LIMS2_GIT_URL:=/var/lib/git/node-lims2.git}
+: ${NODE_LIMS2_COMMIT:=master}
+
+: ${GLOGON_SERVER_DIR:="${SRC_DIR}/glogon-server"}
+: ${GLOGON_SERVER_GIT_URL:=/var/lib/git/glogon-server.git}
+: ${GLOGON_SERVER_COMMIT:=master}
+
+: ${LABS_DIR:="$TARGET_DIR/lib"}
 : ${MYSQL_DIR:="$TARGET_DIR/mysql"}
 : ${SPHINX_DIR:="$TARGET_DIR/sphinxsearch"}
 
@@ -46,10 +70,7 @@ fi
 : ${MYSQL_CONFIG_DIR:="$CONFIG_DIR/mysql"}
 : ${MYSQL_LOG_DIR:="$LOG_DIR/mysql"}
 
-: ${NODE_LIMS2_DIR:="$TARGET_DIR/node-lims2"}
 : ${NODE_LIMS2_LOG_DIR:="$LOG_DIR/node-lims2"}
-
-: ${GLOGON_SERVER_DIR:="$TARGET_DIR/glogon-server"}
 
 # The following variables will be used in `lims2` container.  Export them here.
 export SITE_ID LAB_ID
@@ -64,11 +85,16 @@ then
 	sed -i 's/$LAB_ID/'$LAB_ID'/g' $TARGET_DIR/config/sphinxsearch/conf.d/lims2.conf
 fi
 
-CONTAINER_NAME=lims2-$SITE_ID-$LAB_ID
+[ -e $SRC_DIR ] || mkdir -p $SRC_DIR
+cd $SRC_DIR || exit 2
+[ -e $LIMS2_DIR ] || git clone --recursive --branch $LIMS2_COMMIT $LIMS2_GIT_URL $LIMS2_DIR
+[ -e $NODE_LIMS2_DIR ] || git clone --recursive --branch $NODE_LIMS2_COMMIT $NODE_LIMS2_GIT_URL $NODE_LIMS2_DIR
+[ -e $GLOGON_SERVER_DIR ] || git clone --recursive --branch $GLOGON_SERVER_COMMIT $GLOGON_SERVER_GIT_URL $GLOGON_SERVER_DIR
+cd $ROOT_DIR || exit 2
 
 if [ "$ENABLE_SPHINX" == '1' ] 
 then
-	docker run --name $CONTAINER_NAME-sphinx -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged \
+	docker run --name ${CONTAINER_NAME}.sphinx -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged \
 	    -v $SPHINX_DIR:/var/lib/sphinxsearch \
 	    -v $SPHINX_CONFIG_DIR:/etc/sphinxsearch \
 	    -v $SPHINX_LOG_DIR:/var/log/sphinxsearch \
@@ -77,7 +103,7 @@ fi
 
 if [ "$ENABLE_MYSQL" == '1' ] 
 then
-	MYSQL_CONTAINER_NAME=$CONTAINER_NAME-mysql
+	MYSQL_CONTAINER_NAME=${CONTAINER_NAME}.mysql
 	docker run --name $MYSQL_CONTAINER_NAME -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged \
 	    -v $MYSQL_DIR:/var/lib/mysql \
 	    -v $MYSQL_CONFIG_DIR:/etc/mysql \
@@ -99,12 +125,12 @@ then
 	fi
 fi
 
-: ${BACKUP_LAB_DIR:=${LIMS2_DIR}/sites/${SITE_ID}/labs/${LAB_ID}}
-BACKUP_LAB_DIR=${BACKUP_LAB_DIR%%/}
-[ -e ${LAB_DIR} ] || rsync -azKs "${BACKUP_LAB_DIR}/" "${LAB_DIR}"
+: ${BACKUP_LABS_DIR:=${LIMS2_DIR}/sites/${SITE_ID}/labs}
+BACKUP_LABS_DIR=${BACKUP_LABS_DIR%%/}
+[ -e ${LABS_DIR} ] || rsync -azKs "${BACKUP_LABS_DIR}/" "${LABS_DIR}"
 
-export DOCKER_LIMS2_DIR=/usr/local/share/lims2
-export DOCKER_LAB_DIR=/var/lib/lims2/sites/${SITE_ID}/labs/${LAB_ID}
+export DOCKER_LIMS2_DIR=/usr/share/lims2
+export DOCKER_LABS_DIR=/var/lib/lims2/sites/${SITE_ID}/labs
 export DOCKER_CACHE_DIR=/var/cache/lims2
 export DOCKER_NODE_LIMS2_DIR=/home/genee/node-lims2
 export DOCKER_NODE_LIMS2_LOG_DIR=/var/log/node-lims2
@@ -114,17 +140,17 @@ docker_cmd="docker run --name $CONTAINER_NAME -v /dev/log:/dev/log -v $TARGET_DI
 docker_cmd="$docker_cmd -v $NGINX_CONFIG_DIR:/etc/nginx/sites-enabled"
 docker_cmd="$docker_cmd -v $NGINX_LOG_DIR:/var/log/nginx"
 docker_cmd="$docker_cmd -v $LIMS2_DIR:${DOCKER_LIMS2_DIR}"
-docker_cmd="$docker_cmd -v $LAB_DIR:${DOCKER_LAB_DIR}"
+docker_cmd="$docker_cmd -v $LABS_DIR:${DOCKER_LABS_DIR}"
 docker_cmd="$docker_cmd -v ${NODE_LIMS2_DIR}:${DOCKER_NODE_LIMS2_DIR}"
 docker_cmd="$docker_cmd -v ${NODE_LIMS2_LOG_DIR}:${DOCKER_NODE_LIMS2_LOG_DIR}"
 docker_cmd="$docker_cmd -v ${GLOGON_SERVER_DIR}:${DOCKER_GLOGON_SERVER_DIR}"
 docker_cmd="$docker_cmd -e SITE_ID -e LAB_ID"
-docker_cmd="$docker_cmd -e LIMS2_DIR=${DOCKER_LIMS2_DIR}"
-docker_cmd="$docker_cmd -e LAB_DIR=${DOCKER_LAB_DIR}"
-docker_cmd="$docker_cmd -e CACHE_DIR=${DOCKER_CACHE_DIR}"
-docker_cmd="$docker_cmd -e NODE_LIMS2_DIR=${DOCKER_NODE_LIMS2_DIR}"
-docker_cmd="$docker_cmd -e NODE_LIMS2_LOG_DIR=${DOCKER_NODE_LIMS2_LOG_DIR}"
-docker_cmd="$docker_cmd -e GLOGON_SERVER_DIR=${DOCKER_GLOGON_SERVER_DIR}"
+docker_cmd="$docker_cmd -e DOCKER_LIMS2_DIR"
+docker_cmd="$docker_cmd -e DOCKER_LABS_DIR"
+docker_cmd="$docker_cmd -e DOCKER_CACHE_DIR"
+docker_cmd="$docker_cmd -e DOCKER_NODE_LIMS2_DIR"
+docker_cmd="$docker_cmd -e DOCKER_NODE_LIMS2_LOG_DIR"
+docker_cmd="$docker_cmd -e DOCKER_GLOGON_SERVER_DIR"
 [ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:mysql"
 docker_cmd="$docker_cmd -p 80 -d iamfat/lims2"
 eval $docker_cmd
