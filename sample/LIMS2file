@@ -1,0 +1,6 @@
+SITE_ID=cf
+LAB_ID=ybu
+BACKUP_FILE=/home/rsync/backup/ybu.cf.labscout.cn/backup/backups/remote/cf/ybu/20140720_0000.tgz
+ENABLE_MYSQL=1
+ENABLE_SPHINX=0
+LIMS2_COMMIT=master
