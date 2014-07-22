@@ -15,7 +15,7 @@ if [ -z "$arg" ]; then
 	exit 3
 elif [ -d "$arg" ]; then
 	ROOT_DIR=$arg
-	CONFIG=$arg/main.conf
+	CONFIG=$arg/LIMS2file
 elif [ -e "$arg" ]; then
 	ROOT_DIR=$(dirname $arg)
 	CONFIG=$arg
