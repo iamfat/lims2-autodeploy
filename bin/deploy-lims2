@@ -85,13 +85,6 @@ then
 	sed -i 's/$LAB_ID/'$LAB_ID'/g' $TARGET_DIR/config/sphinxsearch/conf.d/lims2.conf
 fi
 
-[ -e $SRC_DIR ] || mkdir -p $SRC_DIR
-cd $SRC_DIR || exit 2
-[ -e $LIMS2_DIR ] || git clone --recursive --branch $LIMS2_COMMIT $LIMS2_GIT_URL $LIMS2_DIR
-[ -e $NODE_LIMS2_DIR ] || git clone --recursive --branch $NODE_LIMS2_COMMIT $NODE_LIMS2_GIT_URL $NODE_LIMS2_DIR
-[ -e $GLOGON_SERVER_DIR ] || git clone --recursive --branch $GLOGON_SERVER_COMMIT $GLOGON_SERVER_GIT_URL $GLOGON_SERVER_DIR
-cd $ROOT_DIR || exit 2
-
 if docker inspect ${CONTAINER_NAME} >/dev/null 2>&1 ; then
 	docker start ${CONTAINER_NAME}.mysql
 	mysql_ip=$(docker inspect -f '{{ .NetworkSettings.IPAddress }}' $MYSQL_CONTAINER_NAME)
@@ -134,6 +127,14 @@ then
 	fi
 	) &
 fi
+
+[ -e $SRC_DIR ] || mkdir -p $SRC_DIR
+cd $SRC_DIR || exit 2
+# `-a` in `[` is NOT short-circuit.  Use `&&` instead.
+[ -e $LIMS2_DIR ] && [ -n "$(ls -A $LIMS2_DIR)" ] || git clone --recursive --branch $LIMS2_COMMIT $LIMS2_GIT_URL $LIMS2_DIR
+[ -e $NODE_LIMS2_DIR ] && [ -n "$(ls -A $NODE_LIMS2_DIR)" ] || git clone --recursive --branch $NODE_LIMS2_COMMIT $NODE_LIMS2_GIT_URL $NODE_LIMS2_DIR
+[ -e $GLOGON_SERVER_DIR ] && [ -n "$(ls -A $GLOGON_SERVER_DIR)" ] || git clone --recursive --branch $GLOGON_SERVER_COMMIT $GLOGON_SERVER_GIT_URL $GLOGON_SERVER_DIR
+cd $ROOT_DIR || exit 2
 
 : ${BACKUP_LABS_DIR:=${LIMS2_DIR}/sites/${SITE_ID}/labs}
 BACKUP_LABS_DIR=${BACKUP_LABS_DIR%%/}
