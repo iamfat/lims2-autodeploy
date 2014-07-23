@@ -198,5 +198,12 @@ docker_cmd="docker run --name $CONTAINER_NAME --privileged"
 docker_cmd="$docker_cmd --volumes-from ${DATA_CONTAINER_NAME}"
 docker_cmd="$docker_cmd --env-file $ENV_FILE"
 [ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:mysql"
-docker_cmd="$docker_cmd -p 80 -d $DOCKER_LIMS2_IMAGE"
+
+if [ -z "$LIMS2_HOST_PORT" ]
+then
+	docker_cmd="$docker_cmd -p 80 -d $DOCKER_LIMS2_IMAGE"
+else
+	docker_cmd="$docker_cmd -p $LIMS2_HOST_PORT:80 -d $DOCKER_LIMS2_IMAGE"
+fi
+
 eval $docker_cmd
