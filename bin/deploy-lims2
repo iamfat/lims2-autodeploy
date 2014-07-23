@@ -87,10 +87,7 @@ fi
 
 if docker inspect ${CONTAINER_NAME} >/dev/null 2>&1 ; then
 	docker start ${CONTAINER_NAME}.mysql
-	mysql_ip=$(docker inspect -f '{{ .NetworkSettings.IPAddress }}' $MYSQL_CONTAINER_NAME)
-	while ! mysql -u genee -h ${mysql_ip} -e 'quit' 2>/dev/null ; do
-		sleep 1
-	done
+	docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.wait-for-mysql $DOCKER_LIMS2_IMAGE /bin/sh -c 'while ! mysql -u genee -h mysql -p83719730 -e quit 2>/dev/null ; do sleep 1 ; done'
 	docker start ${CONTAINER_NAME}
 	exit 0
 fi
@@ -115,15 +112,12 @@ then
 	    -v $MYSQL_LOG_DIR:/var/log/mysql \
 	    -d iamfat/mysql
 	(
+	docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.wait-for-mysql $DOCKER_LIMS2_IMAGE /bin/sh -c 'while ! mysql -u genee -h mysql -p83719730 -e quit 2>/dev/null ; do sleep 1 ; done'
+	DB_NAME=lims2_${LAB_ID}
+	docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.mysql-create-database $DOCKER_LIMS2_IMAGE mysql -u genee -h mysql -p83719730 -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} DEFAULT CHARACTER SET utf8"
 	if [ -n "$BACKUP_FILE" ]; then
-		mysql_ip=$(docker inspect -f '{{ .NetworkSettings.IPAddress }}' $MYSQL_CONTAINER_NAME)
-		while ! mysql -u genee -h ${mysql_ip} -e 'quit' 2>/dev/null ; do
-			sleep 1
-		done
-		DB_NAME=lims2_${LAB_ID}
-		mysql -u genee -h ${mysql_ip} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME}"
 		docker run -v ${BACKUP_FILE}:/backup.tgz --name ${MYSQL_CONTAINER_NAME}.import --link ${MYSQL_CONTAINER_NAME}:mysql $DOCKER_LIMS2_IMAGE /bin/sh -c "tar x -O -z -f /backup.tgz | mysql -u genee -p83719730 -h mysql ${DB_NAME}"
-		mysql -u genee -h ${mysql_ip} -e "UPDATE ${DB_NAME}._auth SET password = md5('83719730') WHERE token = 'genee'"
+		docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.modify-default-password $DOCKER_LIMS2_IMAGE mysql -u genee -h mysql -p83719730 -e "UPDATE ${DB_NAME}._auth SET password = md5('83719730') WHERE token = 'genee'"
 	fi
 	) &
 fi
