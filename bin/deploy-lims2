@@ -55,6 +55,14 @@ fi
 : ${GLOGON_SERVER_GIT_URL:=/var/lib/git/glogon-server.git}
 : ${GLOGON_SERVER_COMMIT:=master}
 
+: ${EPC_SERVER_DIR:="${SRC_DIR}/epc-server"}
+: ${EPC_SERVER_GIT_URL:=/var/lib/git/epc-server.git}
+: ${EPC_SERVER_COMMIT:=master}
+
+: ${ICCO_SERVER_DIR:="${SRC_DIR}/icco-server"}
+: ${ICCO_SERVER_GIT_URL:=/var/lib/git/icco-server.git}
+: ${ICCO_SERVER_COMMIT:=master}
+
 : ${LABS_DIR:="$TARGET_DIR/labs"}
 [ -e "$LABS_DIR" ] || LABS_DIR="$LIMS2_DIR/sites/$SITE_ID/labs"
 : ${CACHE_DIR:="$TARGET_DIR/cache"}
@@ -137,6 +145,8 @@ cd $SRC_DIR || exit 2
 [ -e $LIMS2_DIR ] && [ -n "$(ls -A $LIMS2_DIR)" ] || git clone --recursive --branch $LIMS2_COMMIT $LIMS2_GIT_URL $LIMS2_DIR
 [ -e $NODE_LIMS2_DIR ] && [ -n "$(ls -A $NODE_LIMS2_DIR)" ] || git clone --recursive --branch $NODE_LIMS2_COMMIT $NODE_LIMS2_GIT_URL $NODE_LIMS2_DIR
 [ -e $GLOGON_SERVER_DIR ] && [ -n "$(ls -A $GLOGON_SERVER_DIR)" ] || git clone --recursive --branch $GLOGON_SERVER_COMMIT $GLOGON_SERVER_GIT_URL $GLOGON_SERVER_DIR
+[ -e $EPC_SERVER_DIR ] && [ -n "$(ls -A $EPC_SERVER_DIR)" ] || git clone --recursive --branch $EPC_SERVER_COMMIT $EPC_SERVER_GIT_URL $EPC_SERVER_DIR
+[ -e $ICCO_SERVER_DIR ] && [ -n "$(ls -A $ICCO_SERVER_DIR)" ] || git clone --recursive --branch $ICCO_SERVER_COMMIT $ICCO_SERVER_GIT_URL $ICCO_SERVER_DIR
 cd $ROOT_DIR || exit 2
 
 export DOCKER_LIMS2_DIR=/usr/share/lims2
@@ -145,6 +155,8 @@ export DOCKER_CACHE_DIR=/var/cache/lims2
 export DOCKER_NODE_LIMS2_DIR=/home/genee/node-lims2
 export DOCKER_NODE_LIMS2_LOG_DIR=/var/log/node-lims2
 export DOCKER_GLOGON_SERVER_DIR=/home/genee/glogon-server
+export DOCKER_EPC_SERVER_DIR=/home/genee/epc-server
+export DOCKER_ICCO_SERVER_DIR=/home/genee/icco-server
 
 ENV_FILE=${TARGET_DIR}/env
 
@@ -164,6 +176,8 @@ docker run --name ${DATA_CONTAINER_NAME} \
 	-v ${NODE_LIMS2_DIR}:${DOCKER_NODE_LIMS2_DIR} \
 	-v ${NODE_LIMS2_LOG_DIR}:${DOCKER_NODE_LIMS2_LOG_DIR} \
 	-v ${GLOGON_SERVER_DIR}:${DOCKER_GLOGON_SERVER_DIR} \
+	-v ${EPC_SERVER_DIR}:${DOCKER_EPC_SERVER_DIR} \
+	-v ${ICCO_SERVER_DIR}:${DOCKER_ICCO_SERVER_DIR} \
 	--env-file $ENV_FILE \
 	$DOCKER_LIMS2_IMAGE true
 
@@ -177,12 +191,22 @@ docker run --name ${CONTAINER_NAME}.init-glogon-server \
 	--env-file $ENV_FILE \
 	-d $DOCKER_LIMS2_IMAGE /data/bin/init-glogon-server.sh
 
+docker run --name ${CONTAINER_NAME}.init-epc-server \
+	--volumes-from $DATA_CONTAINER_NAME \
+	--env-file $ENV_FILE \
+	-d $DOCKER_LIMS2_IMAGE /data/bin/init-epc-server.sh
+
+docker run --name ${CONTAINER_NAME}.init-icco-server \
+	--volumes-from $DATA_CONTAINER_NAME \
+	--env-file $ENV_FILE \
+	-d $DOCKER_LIMS2_IMAGE /data/bin/init-icco-server.sh
+
 docker run --name ${CONTAINER_NAME}.generate-xinetd-conf \
 	--volumes-from ${DATA_CONTAINER_NAME} \
 	--env-file $ENV_FILE \
 	-d $DOCKER_LIMS2_IMAGE /data/bin/generate-xinetd-conf.sh
 
-docker wait ${MYSQL_CONTAINER_NAME}.import ${CONTAINER_NAME}.symlink ${CONTAINER_NAME}.init-node-lims2 ${CONTAINER_NAME}.init-glogon-server ${CONTAINER_NAME}.generate-xinetd-conf >/dev/null 2>&1
+docker wait ${MYSQL_CONTAINER_NAME}.import ${CONTAINER_NAME}.symlink ${CONTAINER_NAME}.init-node-lims2 ${CONTAINER_NAME}.init-glogon-server ${CONTAINER_NAME}.init-epc-server ${CONTAINER_NAME}.init-icco-server ${CONTAINER_NAME}.generate-xinetd-conf >/dev/null 2>&1
 
 docker run --name ${CONTAINER_NAME}.get_cron \
 	--volumes-from $DATA_CONTAINER_NAME \
