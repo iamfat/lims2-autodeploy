@@ -108,6 +108,7 @@ echo '正在启动' > $STATUS_FILE
 if docker inspect ${CONTAINER_NAME} >/dev/null 2>&1 ; then
 	docker start ${CONTAINER_NAME}.mysql
 	docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.wait-for-mysql $DOCKER_LIMS2_IMAGE /bin/sh -c 'while ! mysql -u genee -h mysql -p83719730 -e quit 2>/dev/null ; do sleep 1 ; done'
+	#docker start ${CONTAINER_NAME}.crtmp
 	docker start ${CONTAINER_NAME}
 	rm -f $STATUS_FILE
 	exit 0
@@ -142,6 +143,8 @@ then
 	fi
 	) &
 fi
+
+#docker run --name ${CONTAINER_NAME}.crtmp -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged -d iamfat/crtmp
 
 [ -e $SRC_DIR ] || mkdir -p $SRC_DIR
 cd $SRC_DIR || exit 2
