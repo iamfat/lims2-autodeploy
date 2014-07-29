@@ -63,6 +63,10 @@ fi
 : ${ICCO_SERVER_GIT_URL:=/var/lib/git/icco-server.git}
 : ${ICCO_SERVER_COMMIT:=master}
 
+: ${ENV_SERVER_DIR:="${SRC_DIR}/env-server"}
+: ${ENV_SERVER_GIT_URL:=/var/lib/git/env-server.git}
+: ${ENV_SERVER_COMMIT:=master}
+
 : ${LABS_DIR:="$TARGET_DIR/labs"}
 [ -e "$LABS_DIR" ] || LABS_DIR="$LIMS2_DIR/sites/$SITE_ID/labs"
 : ${CACHE_DIR:="$TARGET_DIR/cache"}
@@ -104,6 +108,7 @@ echo '正在启动' > $STATUS_FILE
 if docker inspect ${CONTAINER_NAME} >/dev/null 2>&1 ; then
 	docker start ${CONTAINER_NAME}.mysql
 	docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.wait-for-mysql $DOCKER_LIMS2_IMAGE /bin/sh -c 'while ! mysql -u genee -h mysql -p83719730 -e quit 2>/dev/null ; do sleep 1 ; done'
+	#docker start ${CONTAINER_NAME}.crtmp
 	docker start ${CONTAINER_NAME}
 	rm -f $STATUS_FILE
 	exit 0
@@ -139,6 +144,8 @@ then
 	) &
 fi
 
+#docker run --name ${CONTAINER_NAME}.crtmp -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged -d iamfat/crtmp
+
 [ -e $SRC_DIR ] || mkdir -p $SRC_DIR
 cd $SRC_DIR || exit 2
 # `-a` in `[` is NOT short-circuit.  Use `&&` instead.
@@ -147,6 +154,7 @@ cd $SRC_DIR || exit 2
 [ -e $GLOGON_SERVER_DIR ] && [ -n "$(ls -A $GLOGON_SERVER_DIR)" ] || git clone --recursive --branch $GLOGON_SERVER_COMMIT $GLOGON_SERVER_GIT_URL $GLOGON_SERVER_DIR
 [ -e $EPC_SERVER_DIR ] && [ -n "$(ls -A $EPC_SERVER_DIR)" ] || git clone --recursive --branch $EPC_SERVER_COMMIT $EPC_SERVER_GIT_URL $EPC_SERVER_DIR
 [ -e $ICCO_SERVER_DIR ] && [ -n "$(ls -A $ICCO_SERVER_DIR)" ] || git clone --recursive --branch $ICCO_SERVER_COMMIT $ICCO_SERVER_GIT_URL $ICCO_SERVER_DIR
+[ -e $ENV_SERVER_DIR ] && [ -n "$(ls -A $ENV_SERVER_DIR)" ] || git clone --recursive --branch $ENV_SERVER_COMMIT $ENV_SERVER_GIT_URL $ENV_SERVER_DIR
 cd $ROOT_DIR || exit 2
 
 export DOCKER_LIMS2_DIR=/usr/share/lims2
@@ -157,6 +165,7 @@ export DOCKER_NODE_LIMS2_LOG_DIR=/var/log/node-lims2
 export DOCKER_GLOGON_SERVER_DIR=/home/genee/glogon-server
 export DOCKER_EPC_SERVER_DIR=/home/genee/epc-server
 export DOCKER_ICCO_SERVER_DIR=/home/genee/icco-server
+export DOCKER_ENV_SERVER_DIR=/home/genee/env-server
 
 ENV_FILE=${TARGET_DIR}/env
 
@@ -178,6 +187,7 @@ docker run --name ${DATA_CONTAINER_NAME} \
 	-v ${GLOGON_SERVER_DIR}:${DOCKER_GLOGON_SERVER_DIR} \
 	-v ${EPC_SERVER_DIR}:${DOCKER_EPC_SERVER_DIR} \
 	-v ${ICCO_SERVER_DIR}:${DOCKER_ICCO_SERVER_DIR} \
+	-v ${ENV_SERVER_DIR}:${DOCKER_ENV_SERVER_DIR} \
 	--env-file $ENV_FILE \
 	$DOCKER_LIMS2_IMAGE true
 
@@ -201,12 +211,17 @@ docker run --name ${CONTAINER_NAME}.init-icco-server \
 	--env-file $ENV_FILE \
 	-d $DOCKER_LIMS2_IMAGE /data/bin/init-icco-server.sh
 
+docker run --name ${CONTAINER_NAME}.init-env-server \
+	--volumes-from $DATA_CONTAINER_NAME \
+	--env-file $ENV_FILE \
+	$DOCKER_LIMS2_IMAGE /data/bin/init-env-server.sh
+
 docker run --name ${CONTAINER_NAME}.generate-xinetd-conf \
 	--volumes-from ${DATA_CONTAINER_NAME} \
 	--env-file $ENV_FILE \
 	-d $DOCKER_LIMS2_IMAGE /data/bin/generate-xinetd-conf.sh
 
-docker wait ${MYSQL_CONTAINER_NAME}.import ${CONTAINER_NAME}.symlink ${CONTAINER_NAME}.init-node-lims2 ${CONTAINER_NAME}.init-glogon-server ${CONTAINER_NAME}.init-epc-server ${CONTAINER_NAME}.init-icco-server ${CONTAINER_NAME}.generate-xinetd-conf >/dev/null 2>&1
+docker wait ${MYSQL_CONTAINER_NAME}.import ${CONTAINER_NAME}.symlink ${CONTAINER_NAME}.init-node-lims2 ${CONTAINER_NAME}.init-glogon-server ${CONTAINER_NAME}.init-epc-server ${CONTAINER_NAME}.init-icco-server ${CONTAINER_NAME}.init-env-server ${CONTAINER_NAME}.generate-xinetd-conf >/dev/null 2>&1
 
 docker run --name ${CONTAINER_NAME}.get_cron \
 	--volumes-from $DATA_CONTAINER_NAME \
