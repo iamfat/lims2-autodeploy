@@ -43,6 +43,9 @@ fi
 : ${TARGET_DIR:="${ROOT_DIR}/data"}
 : ${RUN_DIR:="${ROOT_DIR}/run"}
 
+# For lims2 genee password, not for mysql
+: ${LIMS2_GENEE_PASSWORD:=83719730}
+
 : ${LIMS2_DIR:="${SRC_DIR}/lims2"}
 : ${LIMS2_GIT_URL:=/var/lib/git/lims2.git}
 : ${LIMS2_COMMIT:=master}
@@ -88,7 +91,7 @@ fi
 : ${NODE_LIMS2_LOG_DIR:="$LOG_DIR/node-lims2"}
 
 # The following variables will be used in `lims2` container.  Export them here.
-export SITE_ID LAB_ID
+export SITE_ID LAB_ID LIMS2_GENEE_PASSWORD
 
 if [ ! -d $TARGET_DIR ] 
 then
@@ -139,7 +142,7 @@ then
 	docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.mysql-create-database $DOCKER_LIMS2_IMAGE mysql -u genee -h mysql -p83719730 -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} DEFAULT CHARACTER SET utf8"
 	if [ -n "$BACKUP_FILE" ]; then
 		docker run -v ${BACKUP_FILE}:/backup.tgz --name ${MYSQL_CONTAINER_NAME}.import --link ${MYSQL_CONTAINER_NAME}:mysql $DOCKER_LIMS2_IMAGE /bin/sh -c "tar x -O -z -f /backup.tgz | mysql -u genee -p83719730 -h mysql ${DB_NAME}"
-		docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.modify-default-password $DOCKER_LIMS2_IMAGE mysql -u genee -h mysql -p83719730 -e "UPDATE ${DB_NAME}._auth SET password = md5('83719730') WHERE token = 'genee'"
+		docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.modify-default-password $DOCKER_LIMS2_IMAGE mysql -u genee -h mysql -p83719730 -e "UPDATE ${DB_NAME}._auth SET password = md5('$LIMS2_GENEE_PASSWORD') WHERE token = 'genee'"
 	fi
 	) &
 fi
