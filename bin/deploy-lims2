@@ -44,7 +44,7 @@ fi
 : ${RUN_DIR:="${ROOT_DIR}/run"}
 
 # For lims2 genee password, not for mysql
-: ${LIMS2_GENEE_PASSWORD:=83719730}
+: ${LIMS2_GENEE_PASSWORD:=123456}
 
 : ${LIMS2_DIR:="${SRC_DIR}/lims2"}
 : ${LIMS2_GIT_URL:=/var/lib/git/lims2.git}
