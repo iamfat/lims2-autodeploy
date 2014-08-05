@@ -244,12 +244,13 @@ docker_cmd="$docker_cmd --volumes-from ${DATA_CONTAINER_NAME}"
 docker_cmd="$docker_cmd --env-file $ENV_FILE"
 [ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:mysql"
 
-if [ -z "$LIMS2_HOST_PORT" ]
-then
-	docker_cmd="$docker_cmd -p 80 -d $DOCKER_LIMS2_IMAGE"
+docker_cmd="$docker_cmd -p"
+if [ -z "$LIMS2_HOST_PORT" ]; then
+	docker_cmd="$docker_cmd 80"
 else
-	docker_cmd="$docker_cmd -p $LIMS2_HOST_PORT:80 -d $DOCKER_LIMS2_IMAGE"
+	docker_cmd="$docker_cmd ${LIMS2_HOST_PORT}:80"
 fi
+docker_cmd="$docker_cmd -d $DOCKER_LIMS2_IMAGE"
 
 eval $docker_cmd
 
