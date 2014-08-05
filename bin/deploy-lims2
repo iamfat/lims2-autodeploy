@@ -43,6 +43,9 @@ fi
 : ${TARGET_DIR:="${ROOT_DIR}/data"}
 : ${RUN_DIR:="${ROOT_DIR}/run"}
 
+# For lims2 genee password, not for mysql
+: ${LIMS2_GENEE_PASSWORD:=123456}
+
 : ${LIMS2_DIR:="${SRC_DIR}/lims2"}
 : ${LIMS2_GIT_URL:=/var/lib/git/lims2.git}
 : ${LIMS2_COMMIT:=master}
@@ -88,7 +91,7 @@ fi
 : ${NODE_LIMS2_LOG_DIR:="$LOG_DIR/node-lims2"}
 
 # The following variables will be used in `lims2` container.  Export them here.
-export SITE_ID LAB_ID
+export SITE_ID LAB_ID LIMS2_GENEE_PASSWORD
 
 if [ ! -d $TARGET_DIR ] 
 then
@@ -139,7 +142,7 @@ then
 	docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.mysql-create-database $DOCKER_LIMS2_IMAGE mysql -u genee -h mysql -p83719730 -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} DEFAULT CHARACTER SET utf8"
 	if [ -n "$BACKUP_FILE" ]; then
 		docker run -v ${BACKUP_FILE}:/backup.tgz --name ${MYSQL_CONTAINER_NAME}.import --link ${MYSQL_CONTAINER_NAME}:mysql $DOCKER_LIMS2_IMAGE /bin/sh -c "tar x -O -z -f /backup.tgz | mysql -u genee -p83719730 -h mysql ${DB_NAME}"
-		docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.modify-default-password $DOCKER_LIMS2_IMAGE mysql -u genee -h mysql -p83719730 -e "UPDATE ${DB_NAME}._auth SET password = md5('83719730') WHERE token = 'genee'"
+		docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.modify-default-password $DOCKER_LIMS2_IMAGE mysql -u genee -h mysql -p83719730 -e "UPDATE ${DB_NAME}._auth SET password = md5('$LIMS2_GENEE_PASSWORD') WHERE token = 'genee'"
 	fi
 	) &
 fi
@@ -149,7 +152,9 @@ fi
 [ -e $SRC_DIR ] || mkdir -p $SRC_DIR
 cd $SRC_DIR || exit 2
 # `-a` in `[` is NOT short-circuit.  Use `&&` instead.
-[ -e $LIMS2_DIR ] && [ -n "$(ls -A $LIMS2_DIR)" ] || git clone --recursive --branch $LIMS2_COMMIT $LIMS2_GIT_URL $LIMS2_DIR
+[ -e $LIMS2_DIR ] && [ -n "$(ls -A $LIMS2_DIR)" ] || git clone --branch $LIMS2_COMMIT $LIMS2_GIT_URL $LIMS2_DIR
+# Hack for commits before lims2 2.11
+( cd $LIMS2_DIR && sed -i 's|=.*iamfat/qf|= https://github.com/iamfat/qf|' .gitmodules && git submodule update --init --recursive )
 [ -e $NODE_LIMS2_DIR ] && [ -n "$(ls -A $NODE_LIMS2_DIR)" ] || git clone --recursive --branch $NODE_LIMS2_COMMIT $NODE_LIMS2_GIT_URL $NODE_LIMS2_DIR
 [ -e $GLOGON_SERVER_DIR ] && [ -n "$(ls -A $GLOGON_SERVER_DIR)" ] || git clone --recursive --branch $GLOGON_SERVER_COMMIT $GLOGON_SERVER_GIT_URL $GLOGON_SERVER_DIR
 [ -e $EPC_SERVER_DIR ] && [ -n "$(ls -A $EPC_SERVER_DIR)" ] || git clone --recursive --branch $EPC_SERVER_COMMIT $EPC_SERVER_GIT_URL $EPC_SERVER_DIR
@@ -194,57 +199,58 @@ docker run --name ${DATA_CONTAINER_NAME} \
 docker run --name ${CONTAINER_NAME}.init-node-lims2 \
 	--volumes-from $DATA_CONTAINER_NAME \
 	--env-file $ENV_FILE \
-	-d $DOCKER_LIMS2_IMAGE /data/bin/init-node-lims2.sh
+	--rm $DOCKER_LIMS2_IMAGE /data/bin/init-node-lims2.sh
 
 docker run --name ${CONTAINER_NAME}.init-glogon-server \
 	--volumes-from $DATA_CONTAINER_NAME \
 	--env-file $ENV_FILE \
-	-d $DOCKER_LIMS2_IMAGE /data/bin/init-glogon-server.sh
+	--rm $DOCKER_LIMS2_IMAGE /data/bin/init-glogon-server.sh
 
 docker run --name ${CONTAINER_NAME}.init-epc-server \
 	--volumes-from $DATA_CONTAINER_NAME \
 	--env-file $ENV_FILE \
-	-d $DOCKER_LIMS2_IMAGE /data/bin/init-epc-server.sh
+	--rm $DOCKER_LIMS2_IMAGE /data/bin/init-epc-server.sh
 
 docker run --name ${CONTAINER_NAME}.init-icco-server \
 	--volumes-from $DATA_CONTAINER_NAME \
 	--env-file $ENV_FILE \
-	-d $DOCKER_LIMS2_IMAGE /data/bin/init-icco-server.sh
+	--rm $DOCKER_LIMS2_IMAGE /data/bin/init-icco-server.sh
 
 docker run --name ${CONTAINER_NAME}.init-env-server \
 	--volumes-from $DATA_CONTAINER_NAME \
 	--env-file $ENV_FILE \
-	$DOCKER_LIMS2_IMAGE /data/bin/init-env-server.sh
+	--rm $DOCKER_LIMS2_IMAGE /data/bin/init-env-server.sh
 
 docker run --name ${CONTAINER_NAME}.generate-xinetd-conf \
 	--volumes-from ${DATA_CONTAINER_NAME} \
 	--env-file $ENV_FILE \
-	-d $DOCKER_LIMS2_IMAGE /data/bin/generate-xinetd-conf.sh
+	--rm $DOCKER_LIMS2_IMAGE /data/bin/generate-xinetd-conf.sh
 
-docker wait ${MYSQL_CONTAINER_NAME}.import ${CONTAINER_NAME}.symlink ${CONTAINER_NAME}.init-node-lims2 ${CONTAINER_NAME}.init-glogon-server ${CONTAINER_NAME}.init-epc-server ${CONTAINER_NAME}.init-icco-server ${CONTAINER_NAME}.init-env-server ${CONTAINER_NAME}.generate-xinetd-conf >/dev/null 2>&1
+docker wait ${MYSQL_CONTAINER_NAME}.import ${CONTAINER_NAME}.init-node-lims2 ${CONTAINER_NAME}.init-glogon-server ${CONTAINER_NAME}.init-epc-server ${CONTAINER_NAME}.init-icco-server ${CONTAINER_NAME}.init-env-server ${CONTAINER_NAME}.generate-xinetd-conf >/dev/null 2>&1
 
 docker run --name ${CONTAINER_NAME}.get_cron \
 	--volumes-from $DATA_CONTAINER_NAME \
 	--env-file $ENV_FILE \
 	--link ${MYSQL_CONTAINER_NAME}:mysql \
-	$DOCKER_LIMS2_IMAGE /bin/sh -c '/data/bin/update-database-config.sh ; php ${DOCKER_LIMS2_DIR}/cli/get_cron.php -u=genee > /etc/cron.d/lims2'
+	--rm $DOCKER_LIMS2_IMAGE /bin/sh -c '/data/bin/update-database-config.sh ; php ${DOCKER_LIMS2_DIR}/cli/get_cron.php -u=genee > /etc/cron.d/lims2'
 
 docker run --name ${CONTAINER_NAME}.chown \
 	--volumes-from ${DATA_CONTAINER_NAME} \
 	--env-file $ENV_FILE \
-	$DOCKER_LIMS2_IMAGE /data/bin/chown.sh
+	--rm $DOCKER_LIMS2_IMAGE /data/bin/chown.sh
 
 docker_cmd="docker run --name $CONTAINER_NAME --privileged"
 docker_cmd="$docker_cmd --volumes-from ${DATA_CONTAINER_NAME}"
 docker_cmd="$docker_cmd --env-file $ENV_FILE"
 [ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:mysql"
 
-if [ -z "$LIMS2_HOST_PORT" ]
-then
-	docker_cmd="$docker_cmd -p 80 -d $DOCKER_LIMS2_IMAGE"
+docker_cmd="$docker_cmd -p"
+if [ -z "$LIMS2_HOST_PORT" ]; then
+	docker_cmd="$docker_cmd 80"
 else
-	docker_cmd="$docker_cmd -p $LIMS2_HOST_PORT:80 -d $DOCKER_LIMS2_IMAGE"
+	docker_cmd="$docker_cmd ${LIMS2_HOST_PORT}:80"
 fi
+docker_cmd="$docker_cmd -d $DOCKER_LIMS2_IMAGE"
 
 eval $docker_cmd
 
