@@ -239,10 +239,13 @@ docker run --name ${CONTAINER_NAME}.chown \
 	--env-file $ENV_FILE \
 	--rm $DOCKER_LIMS2_IMAGE /data/bin/chown.sh
 
+GLOGON_PORT=2430
+
 docker_cmd="docker run --name $CONTAINER_NAME --privileged"
 docker_cmd="$docker_cmd --volumes-from ${DATA_CONTAINER_NAME}"
 docker_cmd="$docker_cmd --env-file $ENV_FILE"
 [ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:mysql"
+docker_cmd="$docker_cmd -p $GLOGON_PORT"
 
 docker_cmd="$docker_cmd -p"
 if [ -z "$LIMS2_HOST_PORT" ]; then
@@ -253,5 +256,9 @@ fi
 docker_cmd="$docker_cmd -d $DOCKER_LIMS2_IMAGE"
 
 eval $docker_cmd
+
+
+GLOGON_PUB_PORT=$(docker port ${CONTAINER_NAME} ${GLOGON_PORT})
+docker-enter "${CONTAINER_NAME}" "env DOCKER_GLOGON_SERVER_DIR=${DOCKER_GLOGON_SERVER_DIR} GLOGON_PORT=${GLOGON_PORT} GLOGON_PUB_PORT=${GLOGON_PUB_PORT} /data/bin/update-glogon-port.sh"
 
 rm -f $STATUS_FILE
