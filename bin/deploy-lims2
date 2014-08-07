@@ -196,56 +196,31 @@ docker run --name ${DATA_CONTAINER_NAME} \
 	--env-file $ENV_FILE \
 	$DOCKER_LIMS2_IMAGE true
 
-docker run --name ${CONTAINER_NAME}.init-node-lims2 \
-	--volumes-from $DATA_CONTAINER_NAME \
-	--env-file $ENV_FILE \
-	--rm $DOCKER_LIMS2_IMAGE /data/bin/init-node-lims2.sh
-
-docker run --name ${CONTAINER_NAME}.init-glogon-server \
-	--volumes-from $DATA_CONTAINER_NAME \
-	--env-file $ENV_FILE \
-	--rm $DOCKER_LIMS2_IMAGE /data/bin/init-glogon-server.sh
-
-docker run --name ${CONTAINER_NAME}.init-epc-server \
-	--volumes-from $DATA_CONTAINER_NAME \
-	--env-file $ENV_FILE \
-	--rm $DOCKER_LIMS2_IMAGE /data/bin/init-epc-server.sh
-
-docker run --name ${CONTAINER_NAME}.init-icco-server \
-	--volumes-from $DATA_CONTAINER_NAME \
-	--env-file $ENV_FILE \
-	--rm $DOCKER_LIMS2_IMAGE /data/bin/init-icco-server.sh
-
-docker run --name ${CONTAINER_NAME}.init-env-server \
-	--volumes-from $DATA_CONTAINER_NAME \
-	--env-file $ENV_FILE \
-	--rm $DOCKER_LIMS2_IMAGE /data/bin/init-env-server.sh
-
 docker run --name ${CONTAINER_NAME}.generate-xinetd-conf \
 	--volumes-from ${DATA_CONTAINER_NAME} \
 	--env-file $ENV_FILE \
 	--rm $DOCKER_LIMS2_IMAGE /data/bin/generate-xinetd-conf.sh
 
-docker wait ${MYSQL_CONTAINER_NAME}.import ${CONTAINER_NAME}.init-node-lims2 ${CONTAINER_NAME}.init-glogon-server ${CONTAINER_NAME}.init-epc-server ${CONTAINER_NAME}.init-icco-server ${CONTAINER_NAME}.init-env-server ${CONTAINER_NAME}.generate-xinetd-conf >/dev/null 2>&1
+docker wait ${MYSQL_CONTAINER_NAME}.import ${CONTAINER_NAME}.generate-xinetd-conf >/dev/null 2>&1
 
-docker run --name ${CONTAINER_NAME}.get_cron \
+docker run --name ${CONTAINER_NAME}.update-database-config \
 	--volumes-from $DATA_CONTAINER_NAME \
 	--env-file $ENV_FILE \
 	--link ${MYSQL_CONTAINER_NAME}:mysql \
-	--rm $DOCKER_LIMS2_IMAGE /bin/sh -c '/data/bin/update-database-config.sh ; php ${DOCKER_LIMS2_DIR}/cli/get_cron.php -u=genee > /etc/cron.d/lims2'
+	--rm $DOCKER_LIMS2_IMAGE /bin/sh -c '/data/bin/update-database-config.sh'
 
 docker run --name ${CONTAINER_NAME}.chown \
 	--volumes-from ${DATA_CONTAINER_NAME} \
 	--env-file $ENV_FILE \
 	--rm $DOCKER_LIMS2_IMAGE /data/bin/chown.sh
 
-GLOGON_PORT=2430
+DOCKER_GLOGON_PORT=2430
 
 docker_cmd="docker run --name $CONTAINER_NAME --privileged"
 docker_cmd="$docker_cmd --volumes-from ${DATA_CONTAINER_NAME}"
 docker_cmd="$docker_cmd --env-file $ENV_FILE"
 [ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:mysql"
-docker_cmd="$docker_cmd -p $GLOGON_PORT"
+docker_cmd="$docker_cmd -p $DOCKER_GLOGON_PORT"
 
 docker_cmd="$docker_cmd -p"
 if [ -z "$LIMS2_HOST_PORT" ]; then
@@ -258,7 +233,20 @@ docker_cmd="$docker_cmd -d $DOCKER_LIMS2_IMAGE"
 eval $docker_cmd
 
 
-GLOGON_PUB_PORT=$(docker port ${CONTAINER_NAME} ${GLOGON_PORT})
-docker-enter "${CONTAINER_NAME}" "env DOCKER_GLOGON_SERVER_DIR=${DOCKER_GLOGON_SERVER_DIR} GLOGON_PORT=${GLOGON_PORT} GLOGON_PUB_PORT=${GLOGON_PUB_PORT} /data/bin/update-glogon-port.sh"
+sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR /bin/sh -c 'php ${DOCKER_LIMS2_DIR}/cli/get_cron.php -u=genee > /etc/cron.d/lims2'
+
+GLOGON_PUB_PORT=$(docker port ${CONTAINER_NAME} ${DOCKER_GLOGON_PORT} | sed 's/[^:]*://')
+sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR DOCKER_GLOGON_SERVER_DIR=$DOCKER_GLOGON_SERVER_DIR DOCKER_GLOGON_PORT=$DOCKER_GLOGON_PORT GLOGON_PUB_PORT=$GLOGON_PUB_PORT /data/bin/update-glogon-port.sh
+
+sudo docker-enter "${CONTAINER_NAME}" env DOCKER_NODE_LIMS2_DIR=$DOCKER_NODE_LIMS2_DIR DOCKER_NODE_LIMS2_LOG_DIR=$DOCKER_NODE_LIMS2_LOG_DIR /data/bin/init-node-lims2.sh
+sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart node-lims2
+sudo docker-enter "${CONTAINER_NAME}" env DOCKER_GLOGON_SERVER_DIR=$DOCKER_GLOGON_SERVER_DIR /data/bin/init-glogon-server.sh
+sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart glogon-server
+sudo docker-enter "${CONTAINER_NAME}" env DOCKER_EPC_SERVER_DIR=$DOCKER_EPC_SERVER_DIR /data/bin/init-epc-server.sh
+sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart epc-server
+sudo docker-enter "${CONTAINER_NAME}" env DOCKER_ICCO_SERVER_DIR=$DOCKER_ICCO_SERVER_DIR /data/bin/init-icco-server.sh
+sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart icco-server icco-agent
+sudo docker-enter "${CONTAINER_NAME}" env DOCKER_ENV_SERVER_DIR=$DOCKER_ENV_SERVER_DIR /data/bin/init-env-server.sh
+sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart env-server
 
 rm -f $STATUS_FILE
