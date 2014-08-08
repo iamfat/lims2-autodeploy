@@ -214,13 +214,24 @@ docker run --name ${CONTAINER_NAME}.chown \
 	--env-file $ENV_FILE \
 	--rm $DOCKER_LIMS2_IMAGE /data/bin/chown.sh
 
-DOCKER_GLOGON_PORT=2430
 
 docker_cmd="docker run --name $CONTAINER_NAME --privileged"
 docker_cmd="$docker_cmd --volumes-from ${DATA_CONTAINER_NAME}"
 docker_cmd="$docker_cmd --env-file $ENV_FILE"
 [ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:mysql"
+
+DOCKER_GLOGON_PORT=2430
 docker_cmd="$docker_cmd -p $DOCKER_GLOGON_PORT"
+
+DOCKER_EPC_PORT=3041
+docker_cmd="$docker_cmd -p $DOCKER_EPC_PORT"
+
+DOCKER_ICCO_SERVER_PORT=2333
+DOCKER_ICCO_AGENT_PORT=2332
+docker_cmd="$docker_cmd -p $DOCKER_ICCO_SERVER_PORT -p $DOCKER_ICCO_AGENT_PORT"
+
+DOCKER_ENV_PORT=3741
+docker_cmd="$docker_cmd -p $DOCKER_ENV_PORT"
 
 docker_cmd="$docker_cmd -p"
 if [ -z "$LIMS2_HOST_PORT" ]; then
@@ -237,6 +248,9 @@ sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER
 
 GLOGON_PUB_PORT=$(docker port ${CONTAINER_NAME} ${DOCKER_GLOGON_PORT} | sed 's/[^:]*://')
 sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR DOCKER_GLOGON_SERVER_DIR=$DOCKER_GLOGON_SERVER_DIR DOCKER_GLOGON_PORT=$DOCKER_GLOGON_PORT GLOGON_PUB_PORT=$GLOGON_PUB_PORT /data/bin/update-glogon-port.sh
+sudo docker-enter "${CONTAINER_NAME}" env DOCKER_EPC_SERVER_DIR=$DOCKER_EPC_SERVER_DIR DOCKER_EPC_PORT=$DOCKER_EPC_PORT /data/bin/update-epc-port.sh
+sudo docker-enter "${CONTAINER_NAME}" env DOCKER_ICCO_SERVER_DIR=$DOCKER_ICCO_SERVER_DIR DOCKER_ICCO_SERVER_PORT=$DOCKER_ICCO_SERVER_PORT DOCKER_ICCO_AGENT_PORT=$DOCKER_ICCO_AGENT_PORT /data/bin/update-icco-port.sh
+sudo docker-enter "${CONTAINER_NAME}" env DOCKER_ENV_SERVER_DIR=$DOCKER_ENV_SERVER_DIR DOCKER_ENV_PORT=$DOCKER_ENV_PORT /data/bin/update-env-port.sh
 
 sudo docker-enter "${CONTAINER_NAME}" env DOCKER_NODE_LIMS2_DIR=$DOCKER_NODE_LIMS2_DIR DOCKER_NODE_LIMS2_LOG_DIR=$DOCKER_NODE_LIMS2_LOG_DIR /data/bin/init-node-lims2.sh
 sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart node-lims2
