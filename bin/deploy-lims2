@@ -229,6 +229,9 @@ docker_cmd="$docker_cmd --volumes-from ${DATA_CONTAINER_NAME}"
 docker_cmd="$docker_cmd --env-file $ENV_FILE"
 [ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:mysql"
 
+DOCKER_SSH_PORT=22
+docker_cmd="$docker_cmd -p $DOCKER_SSH_PORT"
+
 DOCKER_GLOGON_PORT=2430
 docker_cmd="$docker_cmd -p $DOCKER_GLOGON_PORT"
 
