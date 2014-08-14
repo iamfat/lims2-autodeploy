@@ -145,8 +145,10 @@ then
 	DB_NAME=lims2_${LAB_ID}
 	docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.mysql-create-database $DOCKER_LIMS2_IMAGE mysql -u genee -h mysql -p83719730 -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} DEFAULT CHARACTER SET utf8"
 	if [ -n "$BACKUP_FILE" ]; then
+		echo '正在导入备份数据' > $STATUS_FILE
 		docker run -v ${BACKUP_FILE}:/backup.tgz --name ${MYSQL_CONTAINER_NAME}.import --link ${MYSQL_CONTAINER_NAME}:mysql $DOCKER_LIMS2_IMAGE /bin/sh -c "tar x -O -z -f /backup.tgz | mysql -u genee -p83719730 -h mysql ${DB_NAME}"
 		docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.modify-default-password $DOCKER_LIMS2_IMAGE mysql -u genee -h mysql -p83719730 -e "UPDATE ${DB_NAME}._auth SET password = md5('$LIMS2_GENEE_PASSWORD') WHERE token = 'genee'"
+		echo '正在启动' > $STATUS_FILE
 	fi
 	) &
 fi
@@ -226,6 +228,9 @@ docker_cmd="docker run --name $CONTAINER_NAME --privileged"
 docker_cmd="$docker_cmd --volumes-from ${DATA_CONTAINER_NAME}"
 docker_cmd="$docker_cmd --env-file $ENV_FILE"
 [ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:mysql"
+
+DOCKER_SSH_PORT=22
+docker_cmd="$docker_cmd -p $DOCKER_SSH_PORT"
 
 DOCKER_GLOGON_PORT=2430
 docker_cmd="$docker_cmd -p $DOCKER_GLOGON_PORT"
