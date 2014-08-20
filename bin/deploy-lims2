@@ -248,6 +248,9 @@ docker_cmd="$docker_cmd -p $DOCKER_ENV_PORT"
 DOCKER_CACS_PORT=2530
 docker_cmd="$docker_cmd -p $DOCKER_CACS_PORT"
 
+DOCKER_VIDCAM_PORT=5824
+docker_cmd="$docker_cmd -p $DOCKER_VIDCAM_PORT"
+
 docker_cmd="$docker_cmd -p"
 if [ -z "$LIMS2_HOST_PORT" ]; then
 	docker_cmd="$docker_cmd 80"
