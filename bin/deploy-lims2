@@ -218,6 +218,12 @@ docker run --name ${CONTAINER_NAME}.update-database-config \
 	--link ${MYSQL_CONTAINER_NAME}:mysql \
 	--rm $DOCKER_LIMS2_IMAGE /bin/sh -c '/data/bin/update-database-config.sh'
 
+docker run --name ${CONTAINER_NAME}.update-ldap-config \
+	--volumes-from $DATA_CONTAINER_NAME \
+	--env-file $ENV_FILE \
+	--link ${MYSQL_CONTAINER_NAME}:mysql \
+	--rm $DOCKER_LIMS2_IMAGE /bin/sh -c '/data/bin/update-ldap-config.sh'
+
 docker run --name ${CONTAINER_NAME}.chown \
 	--volumes-from ${DATA_CONTAINER_NAME} \
 	--env-file $ENV_FILE \
