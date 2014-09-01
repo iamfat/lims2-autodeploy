@@ -160,7 +160,7 @@ cd $SRC_DIR || exit 2
 # `-a` in `[` is NOT short-circuit.  Use `&&` instead.
 [ -e $LIMS2_DIR ] && [ -n "$(ls -A $LIMS2_DIR)" ] || git clone --branch $LIMS2_COMMIT $LIMS2_GIT_URL $LIMS2_DIR
 # Hack for commits before lims2 2.11
-( cd $LIMS2_DIR && sed -i 's|=.*iamfat/qf|= https://github.com/iamfat/qf|' .gitmodules && git submodule update --init --recursive )
+( cd $LIMS2_DIR && git submodule init && git config submodule.system.url https://github.com/iamfat/qf && git submodule update --recursive )
 [ -e $NODE_LIMS2_DIR ] && [ -n "$(ls -A $NODE_LIMS2_DIR)" ] || git clone --recursive --branch $NODE_LIMS2_COMMIT $NODE_LIMS2_GIT_URL $NODE_LIMS2_DIR
 [ -e $GLOGON_SERVER_DIR ] && [ -n "$(ls -A $GLOGON_SERVER_DIR)" ] || git clone --recursive --branch $GLOGON_SERVER_COMMIT $GLOGON_SERVER_GIT_URL $GLOGON_SERVER_DIR
 [ -e $EPC_SERVER_DIR ] && [ -n "$(ls -A $EPC_SERVER_DIR)" ] || git clone --recursive --branch $EPC_SERVER_COMMIT $EPC_SERVER_GIT_URL $EPC_SERVER_DIR
@@ -217,6 +217,12 @@ docker run --name ${CONTAINER_NAME}.update-database-config \
 	--env-file $ENV_FILE \
 	--link ${MYSQL_CONTAINER_NAME}:mysql \
 	--rm $DOCKER_LIMS2_IMAGE /bin/sh -c '/data/bin/update-database-config.sh'
+
+docker run --name ${CONTAINER_NAME}.update-ldap-config \
+	--volumes-from $DATA_CONTAINER_NAME \
+	--env-file $ENV_FILE \
+	--link ${MYSQL_CONTAINER_NAME}:mysql \
+	--rm $DOCKER_LIMS2_IMAGE /bin/sh -c '/data/bin/update-ldap-config.sh'
 
 docker run --name ${CONTAINER_NAME}.chown \
 	--volumes-from ${DATA_CONTAINER_NAME} \
