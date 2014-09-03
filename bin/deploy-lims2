@@ -121,7 +121,7 @@ if docker inspect ${CONTAINER_NAME} >/dev/null 2>&1 ; then
 	exit 0
 fi
 
-DOCKER_LIMS2_IMAGE=iamfat/lims2
+DOCKER_LIMS2_IMAGE=wine.genee.cn:5000/iamfat/lims2
 
 if [ "$ENABLE_SPHINX" == '1' ] 
 then
@@ -129,7 +129,7 @@ then
 	    -v $SPHINX_DIR:/var/lib/sphinxsearch \
 	    -v $SPHINX_CONFIG_DIR:/etc/sphinxsearch \
 	    -v $SPHINX_LOG_DIR:/var/log/sphinxsearch \
-	    -d iamfat/sphinxsearch
+	    -d wine.genee.cn:5000/iamfat/sphinxsearch
 fi
 
 if [ "$ENABLE_MYSQL" == '1' ] 
@@ -139,7 +139,7 @@ then
 	    -v $MYSQL_DIR:/var/lib/mysql \
 	    -v $MYSQL_CONFIG_DIR:/etc/mysql \
 	    -v $MYSQL_LOG_DIR:/var/log/mysql \
-	    -d iamfat/mysql
+	    -d wine.genee.cn:5000/iamfat/mysql
 	(
 	docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.wait-for-mysql $DOCKER_LIMS2_IMAGE /bin/sh -c 'while ! mysql -u genee -h mysql -p83719730 -e quit 2>/dev/null ; do sleep 1 ; done'
 	DB_NAME=lims2_${LAB_ID}
@@ -153,7 +153,7 @@ then
 	) &
 fi
 
-#docker run --name ${CONTAINER_NAME}.crtmp -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged -d iamfat/crtmp
+#docker run --name ${CONTAINER_NAME}.crtmp -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged -d wine.genee.cn:5000/iamfat/crtmp
 
 [ -e $SRC_DIR ] || mkdir -p $SRC_DIR
 cd $SRC_DIR || exit 2
