@@ -121,7 +121,7 @@ if docker inspect ${CONTAINER_NAME} >/dev/null 2>&1 ; then
 	exit 0
 fi
 
-DOCKER_LIMS2_IMAGE=iamfat/lims2
+DOCKER_LIMS2_IMAGE=wine.genee.cn:5000/iamfat/lims2
 
 if [ "$ENABLE_SPHINX" == '1' ] 
 then
@@ -129,7 +129,7 @@ then
 	    -v $SPHINX_DIR:/var/lib/sphinxsearch \
 	    -v $SPHINX_CONFIG_DIR:/etc/sphinxsearch \
 	    -v $SPHINX_LOG_DIR:/var/log/sphinxsearch \
-	    -d iamfat/sphinxsearch
+	    -d wine.genee.cn:5000/iamfat/sphinxsearch
 fi
 
 if [ "$ENABLE_MYSQL" == '1' ] 
@@ -139,7 +139,7 @@ then
 	    -v $MYSQL_DIR:/var/lib/mysql \
 	    -v $MYSQL_CONFIG_DIR:/etc/mysql \
 	    -v $MYSQL_LOG_DIR:/var/log/mysql \
-	    -d iamfat/mysql
+	    -d wine.genee.cn:5000/iamfat/mysql
 	(
 	docker run --rm --link ${CONTAINER_NAME}.mysql:mysql --name ${CONTAINER_NAME}.wait-for-mysql $DOCKER_LIMS2_IMAGE /bin/sh -c 'while ! mysql -u genee -h mysql -p83719730 -e quit 2>/dev/null ; do sleep 1 ; done'
 	DB_NAME=lims2_${LAB_ID}
@@ -153,7 +153,7 @@ then
 	) &
 fi
 
-#docker run --name ${CONTAINER_NAME}.crtmp -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged -d iamfat/crtmp
+#docker run --name ${CONTAINER_NAME}.crtmp -v /dev/log:/dev/log -v $TARGET_DIR:/data --privileged -d wine.genee.cn:5000/iamfat/crtmp
 
 [ -e $SRC_DIR ] || mkdir -p $SRC_DIR
 cd $SRC_DIR || exit 2
@@ -161,12 +161,6 @@ cd $SRC_DIR || exit 2
 [ -e $LIMS2_DIR ] && [ -n "$(ls -A $LIMS2_DIR)" ] || git clone --branch $LIMS2_COMMIT $LIMS2_GIT_URL $LIMS2_DIR
 # Hack for commits before lims2 2.11
 ( cd $LIMS2_DIR && git submodule init && git config submodule.system.url https://github.com/iamfat/qf && git submodule update --recursive )
-[ -e $NODE_LIMS2_DIR ] && [ -n "$(ls -A $NODE_LIMS2_DIR)" ] || git clone --recursive --branch $NODE_LIMS2_COMMIT $NODE_LIMS2_GIT_URL $NODE_LIMS2_DIR
-[ -e $GLOGON_SERVER_DIR ] && [ -n "$(ls -A $GLOGON_SERVER_DIR)" ] || git clone --recursive --branch $GLOGON_SERVER_COMMIT $GLOGON_SERVER_GIT_URL $GLOGON_SERVER_DIR
-[ -e $EPC_SERVER_DIR ] && [ -n "$(ls -A $EPC_SERVER_DIR)" ] || git clone --recursive --branch $EPC_SERVER_COMMIT $EPC_SERVER_GIT_URL $EPC_SERVER_DIR
-[ -e $ICCO_SERVER_DIR ] && [ -n "$(ls -A $ICCO_SERVER_DIR)" ] || git clone --recursive --branch $ICCO_SERVER_COMMIT $ICCO_SERVER_GIT_URL $ICCO_SERVER_DIR
-[ -e $ENV_SERVER_DIR ] && [ -n "$(ls -A $ENV_SERVER_DIR)" ] || git clone --recursive --branch $ENV_SERVER_COMMIT $ENV_SERVER_GIT_URL $ENV_SERVER_DIR
-[ -e $CACS_SERVER_DIR ] && [ -n "$(ls -A $CACS_SERVER_DIR)" ] || git clone --recursive --branch $CACS_SERVER_COMMIT $CACS_SERVER_GIT_URL $CACS_SERVER_DIR
 cd $ROOT_DIR || exit 2
 
 export DOCKER_LIMS2_DIR=/usr/share/lims2
@@ -195,13 +189,7 @@ docker run --name ${DATA_CONTAINER_NAME} \
 	-v $LABS_DIR:${DOCKER_LABS_DIR} \
 	-v $CACHE_DIR:${DOCKER_LIMS2_DIR}/public/cache \
 	-v $CACHE_DIR:${DOCKER_CACHE_DIR} \
-	-v ${NODE_LIMS2_DIR}:${DOCKER_NODE_LIMS2_DIR} \
 	-v ${NODE_LIMS2_LOG_DIR}:${DOCKER_NODE_LIMS2_LOG_DIR} \
-	-v ${GLOGON_SERVER_DIR}:${DOCKER_GLOGON_SERVER_DIR} \
-	-v ${EPC_SERVER_DIR}:${DOCKER_EPC_SERVER_DIR} \
-	-v ${ICCO_SERVER_DIR}:${DOCKER_ICCO_SERVER_DIR} \
-	-v ${ENV_SERVER_DIR}:${DOCKER_ENV_SERVER_DIR} \
-	-v ${CACS_SERVER_DIR}:${DOCKER_CACS_SERVER_DIR} \
 	--env-file $ENV_FILE \
 	$DOCKER_LIMS2_IMAGE true
 
@@ -275,24 +263,9 @@ fi
 sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR /bin/sh -c 'php ${DOCKER_LIMS2_DIR}/cli/get_cron.php -u=genee > /etc/cron.d/lims2'
 
 GLOGON_PUB_PORT=$(docker port ${CONTAINER_NAME} ${DOCKER_GLOGON_PORT} | sed 's/[^:]*://')
-sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR DOCKER_GLOGON_SERVER_DIR=$DOCKER_GLOGON_SERVER_DIR DOCKER_GLOGON_PORT=$DOCKER_GLOGON_PORT GLOGON_PUB_PORT=$GLOGON_PUB_PORT /data/bin/update-glogon-port.sh
-sudo docker-enter "${CONTAINER_NAME}" env DOCKER_EPC_SERVER_DIR=$DOCKER_EPC_SERVER_DIR DOCKER_EPC_PORT=$DOCKER_EPC_PORT /data/bin/update-epc-port.sh
-sudo docker-enter "${CONTAINER_NAME}" env DOCKER_ICCO_SERVER_DIR=$DOCKER_ICCO_SERVER_DIR DOCKER_ICCO_SERVER_PORT=$DOCKER_ICCO_SERVER_PORT DOCKER_ICCO_AGENT_PORT=$DOCKER_ICCO_AGENT_PORT /data/bin/update-icco-port.sh
-sudo docker-enter "${CONTAINER_NAME}" env DOCKER_ENV_SERVER_DIR=$DOCKER_ENV_SERVER_DIR DOCKER_ENV_PORT=$DOCKER_ENV_PORT /data/bin/update-env-port.sh
+sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR GLOGON_PUB_PORT=$GLOGON_PUB_PORT /data/bin/update-glogon-port.sh
 CACS_PUB_PORT=$(docker port ${CONTAINER_NAME} ${DOCKER_CACS_PORT} | sed 's/[^:]*://')
-sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR DOCKER_CACS_SERVER_DIR=$DOCKER_CACS_SERVER_DIR DOCKER_CACS_PORT=$DOCKER_CACS_PORT CACS_PUB_PORT=$CACS_PUB_PORT /data/bin/update-cacs-port.sh
-
-sudo docker-enter "${CONTAINER_NAME}" env DOCKER_NODE_LIMS2_DIR=$DOCKER_NODE_LIMS2_DIR DOCKER_NODE_LIMS2_LOG_DIR=$DOCKER_NODE_LIMS2_LOG_DIR /data/bin/init-node-lims2.sh
-sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart node-lims2
-sudo docker-enter "${CONTAINER_NAME}" env DOCKER_GLOGON_SERVER_DIR=$DOCKER_GLOGON_SERVER_DIR /data/bin/init-glogon-server.sh
-sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart glogon-server
-sudo docker-enter "${CONTAINER_NAME}" env DOCKER_EPC_SERVER_DIR=$DOCKER_EPC_SERVER_DIR /data/bin/init-epc-server.sh
-sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart epc-server
-sudo docker-enter "${CONTAINER_NAME}" env DOCKER_ICCO_SERVER_DIR=$DOCKER_ICCO_SERVER_DIR /data/bin/init-icco-server.sh
-sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart icco-server icco-agent
-sudo docker-enter "${CONTAINER_NAME}" env DOCKER_ENV_SERVER_DIR=$DOCKER_ENV_SERVER_DIR /data/bin/init-env-server.sh
-sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart env-server
-sudo docker-enter "${CONTAINER_NAME}" env DOCKER_CACS_SERVER_DIR=$DOCKER_CACS_SERVER_DIR /data/bin/init-cacs-server.sh
-sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart cacs-server
+sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR CACS_PUB_PORT=$CACS_PUB_PORT /data/bin/update-cacs-port.sh
+supervisorctl restart xinetd php5-fpm nginx
 
 rm -f $STATUS_FILE
