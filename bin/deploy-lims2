@@ -264,7 +264,7 @@ GDOOR_PUB_PORT=$(docker port ${CONTAINER_NAME} ${DOCKER_GDOOR_PORT} | sed 's/[^:
 sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR GDOOR_PUB_PORT=$GDOOR_PUB_PORT /data/bin/update-gdoor-port.sh
 WEB_PUB_PORT=$(docker port ${CONTAINER_NAME} 80 | sed 's/[^:]*://')
 sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR WEB_PUB_PORT=$WEB_PUB_PORT /data/bin/update-web-port.sh
-supervisorctl restart xinetd php5-fpm nginx
+sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart xinetd php5-fpm nginx
 
 sudo docker-enter "${CONTAINER_NAME}" env DOCKER_NODE_LIMS2_DIR=$DOCKER_NODE_LIMS2_DIR DOCKER_NODE_LIMS2_LOG_DIR=$DOCKER_NODE_LIMS2_LOG_DIR /data/bin/init-node-lims2.sh
 
