@@ -105,6 +105,8 @@ then
 fi
 
 
+DOCKER_LIMS2_IMAGE=wine.genee.cn:5000/iamfat/lims2
+
 STATUS_FILE="$RUN_DIR/status"
 [ -e $RUN_DIR ] || mkdir -p $RUN_DIR
 echo '正在启动' > $STATUS_FILE
@@ -117,8 +119,6 @@ if docker inspect ${CONTAINER_NAME} >/dev/null 2>&1 ; then
 	rm -f $STATUS_FILE
 	exit 0
 fi
-
-DOCKER_LIMS2_IMAGE=wine.genee.cn:5000/iamfat/lims2
 
 if [ "$ENABLE_SPHINX" == '1' ] 
 then
@@ -264,7 +264,7 @@ GDOOR_PUB_PORT=$(docker port ${CONTAINER_NAME} ${DOCKER_GDOOR_PORT} | sed 's/[^:
 sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR GDOOR_PUB_PORT=$GDOOR_PUB_PORT /data/bin/update-gdoor-port.sh
 WEB_PUB_PORT=$(docker port ${CONTAINER_NAME} 80 | sed 's/[^:]*://')
 sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR WEB_PUB_PORT=$WEB_PUB_PORT /data/bin/update-web-port.sh
-supervisorctl restart xinetd php5-fpm nginx
+sudo docker-enter "${CONTAINER_NAME}" supervisorctl restart xinetd php5-fpm nginx
 
 sudo docker-enter "${CONTAINER_NAME}" env DOCKER_NODE_LIMS2_DIR=$DOCKER_NODE_LIMS2_DIR DOCKER_NODE_LIMS2_LOG_DIR=$DOCKER_NODE_LIMS2_LOG_DIR /data/bin/init-node-lims2.sh
 
