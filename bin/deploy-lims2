@@ -155,9 +155,9 @@ fi
 [ -e $SRC_DIR ] || mkdir -p $SRC_DIR
 cd $SRC_DIR || exit 2
 # `-a` in `[` is NOT short-circuit.  Use `&&` instead.
-[ -e $LIMS2_DIR ] && [ -n "$(ls -A $LIMS2_DIR)" ] || git clone --branch $LIMS2_COMMIT $LIMS2_GIT_URL $LIMS2_DIR
+[ -e $LIMS2_DIR ] && [ -n "$(ls -A $LIMS2_DIR)" ] || git clone $LIMS2_GIT_URL $LIMS2_DIR
 # Hack for commits before lims2 2.11
-( cd $LIMS2_DIR && git submodule init && git config submodule.system.url https://github.com/iamfat/qf && git submodule update --recursive )
+( cd $LIMS2_DIR && git checkout $LIMS2_COMMIT && git submodule init && git config submodule.system.url https://github.com/iamfat/qf && git submodule update --recursive )
 cd $ROOT_DIR || exit 2
 
 export DOCKER_LIMS2_DIR=/usr/share/lims2
