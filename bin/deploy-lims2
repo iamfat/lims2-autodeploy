@@ -251,8 +251,11 @@ eval $docker_cmd
 
 
 if [ -z "$BACKUP_FILE" ]; then
-	sudo docker-enter "${CONTAINER_NAME}" sudo -u www-data env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR LIMS2_GENEE_PASSWORD=$LIMS2_GENEE_PASSWORD /data/bin/init-db.sh
+	INIT_DB_OPTS='--add-user'
+else
+	INIT_DB_OPTS=
 fi
+sudo docker-enter "${CONTAINER_NAME}" sudo -u www-data env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR LIMS2_GENEE_PASSWORD=$LIMS2_GENEE_PASSWORD /data/bin/init-db.sh $INIT_DB_OPTS
 
 sudo docker-enter "${CONTAINER_NAME}" env SITE_ID=$SITE_ID LAB_ID=$LAB_ID DOCKER_LIMS2_DIR=$DOCKER_LIMS2_DIR /bin/sh -c 'php ${DOCKER_LIMS2_DIR}/cli/get_cron.php -u=genee > /etc/cron.d/lims2'
 
