@@ -9,3 +9,9 @@ LAB_CONFIG=$DOCKER_LIMS2_DIR/sites/$SITE_ID/labs/$LAB_ID/config/device.php
 [ ! -r "$LAB_CONFIG" ] || sed -i "$REGEXP" $LAB_CONFIG
 
 [ ! -r /etc/xinetd.d/lims_device ] || sed -i '/service device_computer/,/\}/d' /etc/xinetd.d/lims_device
+
+EQUIP_CONFIG=$DOCKER_LIMS2_DIR/sites/$SITE_ID/labs/$LAB_ID/config/equipment.php
+if [ ! -e "$EQUIP_CONFIG" ]; then
+	printf "<?php\n\n" > "$EQUIP_CONFIG"
+fi
+echo "\$config['computer_host'] = explode(':', \$_SERVER['HTTP_HOST'], 2)[0];" >> "$EQUIP_CONFIG"
