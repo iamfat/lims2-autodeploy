@@ -210,6 +210,7 @@ docker run --name ${CONTAINER_NAME}.chown \
 
 
 docker_cmd="docker run --name $CONTAINER_NAME --privileged"
+docker_cmd="$docker_cmd --dns=172.17.42.1"
 docker_cmd="$docker_cmd --volumes-from ${DATA_CONTAINER_NAME}"
 docker_cmd="$docker_cmd --env-file $ENV_FILE"
 [ -z "$MYSQL_CONTAINER_NAME" ] || docker_cmd="$docker_cmd --link $MYSQL_CONTAINER_NAME:mysql"
